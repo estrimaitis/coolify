@@ -14,17 +14,27 @@ const app = express();
 const PORT = process.env.PORT || 4001;
 const CORS_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:4000';
 
-// Middleware
-const corsOptions = {
-  origin: CORS_ORIGIN.split(',').map(origin => origin.trim()),
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  optionsSuccessStatus: 200
-};
+// Middleware - Manual CORS handling for better compatibility
+app.use((req, res, next) => {
+  const allowedOrigins = CORS_ORIGIN.split(',').map(origin => origin.trim());
+  const origin = req.headers.origin;
+  
+  if (origin && allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  }
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+  
+  next();
+});
 
-app.use(cors(corsOptions));
-app.options('*', cors(corsOptions)); // Enable preflight for all routes
 app.use(express.json());
 
 // Routes
