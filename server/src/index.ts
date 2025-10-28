@@ -15,10 +15,16 @@ const PORT = process.env.PORT || 4001;
 const CORS_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:4000';
 
 // Middleware
-app.use(cors({
+const corsOptions = {
   origin: CORS_ORIGIN.split(',').map(origin => origin.trim()),
   credentials: true,
-}));
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  optionsSuccessStatus: 200
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions)); // Enable preflight for all routes
 app.use(express.json());
 
 // Routes
