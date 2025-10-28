@@ -1,6 +1,12 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import { 
+  initDatabase, 
+  saveSurveyResponse, 
+  getAllSurveyResponses, 
+  getSurveyStats 
+} from './db';
 
 dotenv.config();
 
@@ -15,17 +21,6 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// In-memory storage for survey responses (in production, use a database)
-interface SurveyResponse {
-  id: string;
-  experience: string;
-  features: string;
-  feedback: string;
-  timestamp: string;
-}
-
-const surveyResponses: SurveyResponse[] = [];
-
 // Routes
 app.get('/api/health', (req: Request, res: Response) => {
   res.json({ 
@@ -35,7 +30,7 @@ app.get('/api/health', (req: Request, res: Response) => {
   });
 });
 
-app.post('/api/survey', (req: Request, res: Response) => {
+app.post('/api/survey', async (req: Request, res: Response) => {
   try {
     const { experience, features, feedback } = req.body;
 
@@ -46,19 +41,15 @@ app.post('/api/survey', (req: Request, res: Response) => {
       });
     }
 
-    const newResponse: SurveyResponse = {
-      id: Date.now().toString(),
+    const newResponse = await saveSurveyResponse(
       experience,
       features,
-      feedback: feedback || '',
-      timestamp: new Date().toISOString(),
-    };
-
-    surveyResponses.push(newResponse);
+      feedback || ''
+    );
 
     console.log('Survey response received:', {
       id: newResponse.id,
-      totalResponses: surveyResponses.length
+      timestamp: newResponse.timestamp
     });
 
     res.status(201).json({
@@ -75,31 +66,41 @@ app.post('/api/survey', (req: Request, res: Response) => {
   }
 });
 
-app.get('/api/survey/responses', (req: Request, res: Response) => {
-  res.json({
-    success: true,
-    count: surveyResponses.length,
-    data: surveyResponses,
-  });
+app.get('/api/survey/responses', async (req: Request, res: Response) => {
+  try {
+    const responses = await getAllSurveyResponses();
+    res.json({
+      success: true,
+      count: responses.length,
+      data: responses,
+    });
+  } catch (error) {
+    console.error('Error fetching survey responses:', error);
+    res.status(500).json({ 
+      error: 'Internal server error',
+      message: 'Failed to fetch survey responses'
+    });
+  }
 });
 
-app.get('/api/survey/stats', (req: Request, res: Response) => {
-  const experienceStats: Record<string, number> = {};
-  const featureStats: Record<string, number> = {};
-
-  surveyResponses.forEach(response => {
-    experienceStats[response.experience] = (experienceStats[response.experience] || 0) + 1;
-    featureStats[response.features] = (featureStats[response.features] || 0) + 1;
-  });
-
-  res.json({
-    success: true,
-    totalResponses: surveyResponses.length,
-    stats: {
-      experience: experienceStats,
-      features: featureStats,
-    },
-  });
+app.get('/api/survey/stats', async (req: Request, res: Response) => {
+  try {
+    const stats = await getSurveyStats();
+    res.json({
+      success: true,
+      totalResponses: stats.totalResponses,
+      stats: {
+        experience: stats.experience,
+        features: stats.features,
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching survey stats:', error);
+    res.status(500).json({ 
+      error: 'Internal server error',
+      message: 'Failed to fetch survey stats'
+    });
+  }
 });
 
 // 404 handler
@@ -110,9 +111,20 @@ app.use((req: Request, res: Response) => {
   });
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-  console.log(`CORS enabled for: ${CORS_ORIGIN}`);
-});
+// Initialize database and start server
+const startServer = async () => {
+  try {
+    await initDatabase();
+    app.listen(PORT, () => {
+      console.log(`Server is running on port ${PORT}`);
+      console.log(`CORS enabled for: ${CORS_ORIGIN}`);
+      console.log('Database connected successfully');
+    });
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+  }
+};
+
+startServer();
 
