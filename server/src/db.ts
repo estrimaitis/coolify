@@ -1,8 +1,22 @@
 import { Pool } from 'pg';
 
+// Configure SSL based on environment variable
+const getSSLConfig = () => {
+  const sslEnabled = process.env.DATABASE_SSL === 'true';
+  
+  if (!sslEnabled) {
+    return false;
+  }
+  
+  // If SSL is enabled, allow self-signed certificates
+  return {
+    rejectUnauthorized: false
+  };
+};
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  ssl: getSSLConfig(),
 });
 
 export const initDatabase = async () => {
