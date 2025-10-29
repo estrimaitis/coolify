@@ -1,232 +1,304 @@
-# Survey App - Coolify Deployment Test
+# Survey App - Coolify Deployment
 
-A simple survey application built with Next.js (frontend) and Express (backend) in a monorepo structure, designed for easy deployment on Coolify with separate domains.
+A full-stack survey application with Next.js frontend, Express backend, and PostgreSQL database. Designed for Coolify deployment with separate domains.
+
+## 🏗️ Stack
+
+- **Frontend**: Next.js 14 (TypeScript)
+- **Backend**: Express + TypeScript
+- **Database**: PostgreSQL
+- **Deployment**: Coolify
+- **Ports**: Frontend (4000), Backend (4001)
 
 ## 📁 Project Structure
 
 ```
-.
-├── app/                    # Next.js frontend application (root)
-│   ├── layout.tsx
-│   ├── page.tsx
-│   └── globals.css
-├── server/                 # Express backend application
+├── app/                    # Next.js frontend (root)
+├── server/                 # Express backend
 │   ├── src/
-│   │   └── index.ts
-│   ├── package.json
-│   ├── tsconfig.json
-│   └── .env.example
+│   │   ├── index.ts       # Server entry point
+│   │   └── db.ts          # PostgreSQL connection
+│   └── package.json
 ├── package.json            # Frontend dependencies
-├── next.config.js
-├── tsconfig.json
-├── .env.example
 └── README.md
 ```
 
-## 🚀 Features
+## 🚀 Quick Start (Local Development)
 
-- **Frontend (Next.js 14)**: Interactive survey form with modern UI
-- **Backend (Express)**: RESTful API with TypeScript
-- **Separate Deployments**: Each app can be deployed to different domains
-- **Environment Variables**: Configured for different environments
-- **CORS Support**: Properly configured for cross-origin requests
+### 1. Install Dependencies
+```bash
+npm install
+cd server && npm install && cd ..
+```
 
-## 🛠️ Local Development
+### 2. Setup PostgreSQL
+```bash
+# Using Docker
+docker run --name survey-postgres \
+  -e POSTGRES_DB=survey_db \
+  -e POSTGRES_PASSWORD=password \
+  -p 5432:5432 \
+  -d postgres:16
+```
 
-### Prerequisites
+### 3. Configure Environment Variables
 
-- Node.js 18+ and npm
+**Root `.env`:**
+```env
+NEXT_PUBLIC_API_URL=http://localhost:4001
+```
 
-### Setup
+**`server/.env`:**
+```env
+PORT=4001
+CORS_ORIGIN=http://localhost:4000
+DATABASE_URL=postgresql://postgres:password@localhost:5432/survey_db
+DATABASE_SSL=false
+```
 
-1. **Install frontend dependencies:**
-   ```bash
-   npm install
-   ```
+### 4. Run Applications
 
-2. **Install server dependencies:**
-   ```bash
-   cd server
-   npm install
-   cd ..
-   ```
-
-3. **Configure environment variables:**
-
-   **Frontend (.env in root):**
-   ```env
-   NEXT_PUBLIC_API_URL=http://localhost:4001
-   ```
-
-   **Backend (server/.env):**
-   ```env
-   PORT=4001
-   CORS_ORIGIN=http://localhost:4000
-   ```
-
-### Running Locally
-
-**Terminal 1 - Frontend:**
+**Terminal 1 (Frontend):**
 ```bash
 npm run dev
+# Runs on http://localhost:4000
 ```
-Frontend will run on `http://localhost:4000`
 
-**Terminal 2 - Backend:**
+**Terminal 2 (Backend):**
 ```bash
 cd server
 npm run dev
+# Runs on http://localhost:4001
 ```
-Backend will run on `http://localhost:4001`
 
 ## 🐳 Coolify Deployment
 
-Deploy both applications to separate domains on Coolify.
+### Step 1: Create PostgreSQL Database
 
-### Prerequisites
+1. Coolify → **"+ New"** → **"Database"** → **"PostgreSQL"**
+2. Configure:
+   - Name: `survey-database`
+   - Database: `survey_db`
+   - Version: 16 (latest)
+3. Copy the connection URL after creation
 
-- Coolify instance running
-- GitHub repository with this code
-- Two domain names (or subdomains)
+### Step 2: Deploy Backend
 
-### Deployment Steps
-
-#### 1. Deploy Backend (Server)
-
-1. In Coolify, create a new **Resource** → **Application**
+1. Coolify → **"+ New"** → **"Application"**
 2. Connect your GitHub repository
-3. Configure the application:
-   - **Name**: `survey-app-server`
-   - **Build Pack**: `nixpacks`
-   - **Base Directory**: `server`
-   - **Install Command**: `npm install`
-   - **Build Command**: `npm run build`
-   - **Start Command**: `npm start`
-   - **Port**: `4001`
+3. **Configuration:**
+   - Base Directory: `server`
+   - Build Pack: `nixpacks`
+   - Port: `4001`
 
-4. Set environment variables:
-   ```
+4. **Environment Variables:**
+   ```env
    PORT=4001
    CORS_ORIGIN=https://your-frontend-domain.com
+   DATABASE_URL=postgresql://user:pass@host:5432/survey_db?sslmode=disable
+   DATABASE_SSL=false
    ```
+   ✅ Check "Available at Buildtime" and "Available at Runtime"
+
+5. **Domain:**
+   - Add: `https://api.yourdomain.com` (include https://)
    
-5. Set your domain (e.g., `api.yourdomain.com`)
-6. Deploy the application
+6. Click **"Deploy"**
 
-#### 2. Deploy Frontend (Next.js)
+### Step 3: Deploy Frontend
 
-1. In Coolify, create a new **Resource** → **Application**
-2. Connect the same GitHub repository
-3. Configure the application:
-   - **Name**: `survey-app-frontend`
-   - **Build Pack**: `nixpacks`
-   - **Base Directory**: `.` (root directory)
-   - **Install Command**: `npm install`
-   - **Build Command**: `npm run build`
-   - **Start Command**: `npm start`
-   - **Port**: `4000`
+1. Coolify → **"+ New"** → **"Application"**
+2. Use the **same GitHub repository**
+3. **Configuration:**
+   - Base Directory: `.` (root)
+   - Build Pack: `nixpacks`
+   - Port: `4000`
 
-4. Set environment variables:
-   ```
+4. **Environment Variables:**
+   ```env
    NEXT_PUBLIC_API_URL=https://api.yourdomain.com
    ```
+   ✅ Check "Available at Buildtime" and "Available at Runtime"
+
+5. **Domain:**
+   - Add: `https://survey.yourdomain.com` (include https://)
    
-5. Set your domain (e.g., `survey.yourdomain.com`)
-6. Deploy the application
+6. Click **"Deploy"**
 
-### Important Notes for Coolify
+### Step 4: Update CORS (After Frontend Deploys)
 
-- **Separate Builds**: Even though both apps are in the same repository, Coolify will build them separately using the Base Directory setting
-- **Environment Variables**: Make sure the `CORS_ORIGIN` in the backend matches your frontend domain
-- **HTTPS**: Coolify automatically provisions SSL certificates for your domains
-- **Port Mapping**: Coolify handles port mapping automatically
-- **Deployment Order**: Deploy the backend first, then use its URL in the frontend environment variables
+1. Go to backend → Environment Variables
+2. Update `CORS_ORIGIN` with actual frontend URL
+3. **Redeploy backend**
 
-### Environment Variables Reference
+## 🌐 Custom Domain Setup (Cloudflare)
 
-**Frontend (.env):**
-```env
-NEXT_PUBLIC_API_URL=https://your-backend-domain.com
+### 1. Configure DNS Records
+
+In Cloudflare DNS:
+```
+Type: A, Name: survey, Content: YOUR_SERVER_IP, Proxy: DNS only (gray cloud)
+Type: A, Name: api,    Content: YOUR_SERVER_IP, Proxy: DNS only (gray cloud)
 ```
 
-**Backend (server/.env):**
-```env
-PORT=4001
-CORS_ORIGIN=https://your-frontend-domain.com
+⚠️ **Important**: Disable Cloudflare proxy (gray cloud) for SSL to work
+
+### 2. Wait for DNS Propagation
+
+Check with:
+```bash
+nslookup survey.yourdomain.com
+nslookup api.yourdomain.com
 ```
+
+Should return your server IP.
+
+### 3. Update Domains in Coolify
+
+- Backend: `https://api.yourdomain.com`
+- Frontend: `https://survey.yourdomain.com`
+
+### 4. Redeploy Both Applications
+
+Coolify will auto-provision SSL certificates.
 
 ## 📡 API Endpoints
 
-### Health Check
-```
-GET /api/health
-```
-Returns server status
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/health` | GET | Health check |
+| `/api/survey` | POST | Submit survey response |
+| `/api/survey/responses` | GET | Get all responses |
+| `/api/survey/stats` | GET | Get statistics |
 
-### Submit Survey
-```
-POST /api/survey
-Content-Type: application/json
+**Example Usage:**
+```bash
+# View responses
+curl https://api.yourdomain.com/api/survey/responses
 
-{
-  "experience": "Excellent",
-  "features": "Easy Deployment",
-  "feedback": "Great tool!"
-}
+# View stats
+curl https://api.yourdomain.com/api/survey/stats
 ```
 
-### Get All Responses
+## 🗄️ Database Management
+
+### Connect to PostgreSQL in Coolify
+
+1. Go to your PostgreSQL database in Coolify
+2. Click **"Terminal"** tab
+3. Run:
+   ```bash
+   psql -U postgres -d postgres
+   ```
+
+### Useful SQL Commands
+
+```sql
+-- View all responses
+SELECT * FROM survey_responses ORDER BY timestamp DESC;
+
+-- Count total responses
+SELECT COUNT(*) FROM survey_responses;
+
+-- Stats by experience
+SELECT experience, COUNT(*) FROM survey_responses GROUP BY experience;
+
+-- Stats by features
+SELECT features, COUNT(*) FROM survey_responses GROUP BY features;
+
+-- Exit psql
+\q
 ```
-GET /api/survey/responses
+
+## 🔧 Common Issues & Fixes
+
+### Issue: CORS Error
+
+**Symptom:** "No 'Access-Control-Allow-Origin' header"
+
+**Fix:**
+1. Backend env: `CORS_ORIGIN=https://your-actual-frontend-domain.com`
+2. Redeploy backend
+3. Clear browser cache
+
+### Issue: SSL Connection Error
+
+**Symptom:** "The server does not support SSL connections"
+
+**Fix:**
+1. Add `?sslmode=disable` to DATABASE_URL
+2. Set `DATABASE_SSL=false`
+3. Redeploy
+
+### Issue: Domain Shows "No Available Server"
+
+**Fix:**
+1. Ensure domain in Coolify includes `https://`
+2. Redeploy application
+3. Wait for SSL certificate (1-5 minutes)
+
+### Issue: Frontend Can't Reach Backend
+
+**Fix:**
+1. Verify `NEXT_PUBLIC_API_URL` matches backend domain
+2. Check both apps are running
+3. Redeploy frontend (env vars need rebuild)
+
+### Issue: DNS Not Resolving
+
+**Fix:**
+1. Check DNS: `nslookup yourdomain.com 8.8.8.8`
+2. Turn off Cloudflare proxy (gray cloud)
+3. Wait 5-30 minutes for propagation
+
+## ⚙️ Environment Variables Quick Reference
+
+### Frontend
+```env
+NEXT_PUBLIC_API_URL=https://api.yourdomain.com
 ```
 
-### Get Statistics
+### Backend
+```env
+PORT=4001
+CORS_ORIGIN=https://survey.yourdomain.com
+DATABASE_URL=postgresql://user:pass@host:5432/db?sslmode=disable
+DATABASE_SSL=false
 ```
-GET /api/survey/stats
-```
 
-## 🧪 Testing the Deployment
+### Important Notes:
+- `NEXT_PUBLIC_*` variables must be set at **buildtime** (check the box in Coolify)
+- Redeploy frontend after changing `NEXT_PUBLIC_*` variables
+- Redeploy backend after changing `CORS_ORIGIN`
 
-1. Visit your frontend domain
-2. Fill out the survey form
-3. Submit the form
-4. Check if the response is saved successfully
-5. Visit `https://your-backend-domain.com/api/health` to verify the API is running
-6. Visit `https://your-backend-domain.com/api/survey/stats` to see statistics
+## 🎯 Testing Checklist
 
-## 📝 Notes
+- [ ] Backend health: `https://api.yourdomain.com/api/health`
+- [ ] Frontend loads: `https://survey.yourdomain.com`
+- [ ] Submit a survey response
+- [ ] Check responses: `https://api.yourdomain.com/api/survey/responses`
+- [ ] View stats: `https://api.yourdomain.com/api/survey/stats`
+- [ ] Check PostgreSQL: `psql` → `SELECT * FROM survey_responses;`
 
-- The backend stores responses in memory (not persistent). For production, consider using a database.
-- Both applications use TypeScript for type safety
-- The frontend uses Next.js 14 with App Router
-- CORS is configured to allow requests from your frontend domain
+## 📚 Additional Documentation
 
-## 🔧 Troubleshooting
+- **PostgreSQL Setup**: See `POSTGRES_SETUP.md` for detailed database configuration
+- **Coolify Deployment**: See `DEPLOYMENT.md` for step-by-step deployment guide
 
-### Frontend can't connect to backend
+## 💡 Tips
 
-1. Check that `NEXT_PUBLIC_API_URL` in frontend matches your backend domain
-2. Verify `CORS_ORIGIN` in backend includes your frontend domain
-3. Ensure both applications are running
+- **Auto-Deploy**: Enable in Coolify → Configuration → Advanced → Auto Deploy
+- **Container Names**: Set custom names in Configuration → Advanced (disables rolling updates)
+- **Logs**: Check deployment logs in Coolify for debugging
+- **Database Backup**: Set up regular backups in Coolify database settings
 
-### Coolify deployment fails
+## 🆘 Still Stuck?
 
-1. Check build logs in Coolify dashboard
-2. Verify Base Directory is set correctly (`server` for backend, `.` for frontend)
-3. Ensure all dependencies are listed in package.json
-4. Check that start commands are correct
+1. Check Coolify logs: Application → Logs tab
+2. Check browser console: F12 → Console tab
+3. Verify DNS: `nslookup yourdomain.com`
+4. Test API directly: `curl https://api.yourdomain.com/api/health`
 
-### CORS errors
+---
 
-1. Update `CORS_ORIGIN` in backend to include your frontend domain
-2. Redeploy the backend application
-3. Clear browser cache and try again
-
-## 📄 License
-
-MIT
-
-## 🤝 Contributing
-
-This is a test application for Coolify deployment. Feel free to use it as a template for your own projects!
-
+**Built with ❤️ for testing Coolify deployments**
